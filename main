@@ -1,0 +1,50 @@
+#!/bin/bash
+
+MODEL_PATH="$HOME/whisper.cpp/models/ggml-base.en.bin"
+TEMP_AUDIO="/tmp/test_whisper.wav"
+TEMP_TEXT="/tmp/test_result.txt"
+WHISPER_LOGS="/dev/null"
+BEEP_SOUND="/home/shubham/sounds/notifications/short_beep_simple.mp3"
+STOP=false
+
+# Cleanup and exit on Ctrl+C
+cleanup() {
+    echo -e "\n[+] Exiting gracefully..."
+    paplay "$BEEP_SOUND" &> /dev/null &
+    dunstify "Whisper STT" "Stopped" -t 1500
+    STOP=true
+    kill 0
+    exit 0
+}
+trap cleanup SIGINT
+
+# Startup beep and notification
+paplay "$BEEP_SOUND" &> /dev/null &
+dunstify "Whisper STT" "Started. Listening..." -t 1500
+echo "[+] Starting continuous speech-to-text. Press [Ctrl+C] to stop."
+
+while [ "$STOP" = false ]; do
+    echo "[+] Speak now (stops after 1.5s of silence)..."
+
+    # Record with sensitivity
+        sox -t alsa default "$TEMP_AUDIO" silence 1 0.1 1% 1 1.5 1%
+
+    echo "[+] Capturing ended, transcribing now..."
+    dunstify "Whisper STT" "Transcribing..." -t 1500
+    paplay "$BEEP_SOUND" &> /dev/null &
+
+    /home/shubham/whisper.cpp/build/bin/whisper-cli -m "$MODEL_PATH" -f "$TEMP_AUDIO" -otxt -of "$TEMP_TEXT" &> "$WHISPER_LOGS"
+
+    echo "[+] Transcribed Text:"
+    cat "$TEMP_TEXT.txt"
+
+        paplay "$BEEP_SOUND" &> /dev/null & 
+
+        # Remove newlines and extra spaces from the transcript
+    TRANSCRIPT=$(cat "$TEMP_TEXT.txt" | tr -d '\n' | sed 's/  */ /g')
+        echo "[+] Typing: $TRANSCRIPT"
+        xdotool type --delay 10 "$TRANSCRIPT"
+
+    sleep 0.5
+done
+
