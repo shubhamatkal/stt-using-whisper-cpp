@@ -1,0 +1,12 @@
+#!/bin/bash
+
+SCRIPT_PATH="$HOME/scripts/whisper_typing"
+
+# Check if already running
+if pgrep -f "$SCRIPT_PATH" > /dev/null; then
+    echo "[+] Script running. Killing..."
+    pkill -f "$SCRIPT_PATH"
+else
+    echo "[+] Starting Whisper Typing script..."
+    setsid "$SCRIPT_PATH" &> /dev/null &
+fi
